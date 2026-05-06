@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Solve the Maze • Sea / Water / Ocean</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --ocean-deep: #0B3B5C;
+            --ocean-mid: #1A6B8A;
+            --ocean-light: #7EC8E0;
+            --mint-soft: #B8E4E0;
+            --white-cream: #F5FBFD;
+            --white-pure: #FFFFFF;
+            --accent-coral: #F4A261;
+            --shadow-soft: rgba(11, 59, 92, 0.12);
+            --shadow-medium: rgba(11, 59, 92, 0.22);
+        }
+
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background: linear-gradient(145deg, #D4F1F9 0%, #B0E0EC 40%, #89CFF0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+            background: #F5FBFD;
+            border-radius: 40px;
+            box-shadow: 0 20px 40px var(--shadow-medium);
+            padding: 25px 20px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .screen {
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 7vw, 3rem);
+            font-weight: 700;
+            color: var(--ocean-deep);
+            text-align: center;
+            margin-bottom: -5px;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--ocean-mid);
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .style-selector {
+            background: var(--white-cream);
+            border-radius: 20px;
+            padding: 15px;
+            width: 100%;
+            box-shadow: 0 5px 15px var(--shadow-soft);
+        }
+
+        .style-option {
+            background: linear-gradient(135deg, #C5F0F0, #A8E2E6);
+            border: 2px solid var(--ocean-light);
+            border-radius: 16px;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: var(--ocean-deep);
+            font-size: 1.1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .style-option.selected {
+            background: var(--ocean-deep);
+            border-color: var(--ocean-deep);
+            color: white;
+        }
+
+        .btn {
+            background: var(--ocean-deep);
+            border: none;
+            color: white;
+            font-family: 'Noto Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            background: linear-gradient(135deg, #1A6B8A, #0B3B5C);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        .btn.secondary {
+            background: white;
+            color: var(--ocean-deep);
+            border: 2px solid var(--ocean-light);
+            font-size: 1rem;
+            padding: 12px 25px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(11, 59, 92, 0.1);
+            border-top: 5px solid var(--ocean-mid);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px var(--shadow-medium);
+            touch-action: none;
+            cursor: default;
+            background: white;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .controls-row .btn {
+            flex: 1;
+        }
+
+        .author-note {
+            color: var(--ocean-mid);
+            font-size: 0.8rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        .finish-row {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Стартовый экран -->
+        <div id="startScreen" class="screen active">
+            <h1>Solve the Maze</h1>
+            <p class="subtitle">by elizarayd</p>
+            
+<div class="style-selector">
+    <div class="style-option selected" data-style="sea">🌊 Sea / Water / Ocean</div>
+    <div class="style-option" data-style="forest">🌳 Forest / Nature</div>
+    <div class="style-option" data-style="darkAcademia">📚 Dark Academia</div>
+</div>
+
+<button class="btn" id="playBtn">▶ Играть</button>
+</div>
+           
+
+        <!-- Экран загрузки -->
+        <div id="loadingScreen" class="screen">
+            <h2 style="color:var(--ocean-deep);">Загрузка</h2>
+            <div class="spinner"></div>
+            <p style="color:var(--ocean-mid);">Генерация лабиринта...</p>
+        </div>
+
+        <!-- Игровой экран -->
+        <div id="gameScreen" class="screen">
+            <canvas id="mazeCanvas"></canvas>
+            <div class="finish-row">
+                <button class="btn" id="completeBtn" disabled>🏁 Завершить</button>
+            </div>
+            <div class="controls-row">
+                <button class="btn secondary" id="playAgainBtn">🔄 Сыграть ещё раз</button>
+            </div>
+            <p class="author-note">Solve the Maze</p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+
+
+
+const palettes = {
+    sea: {
+        bg: '#FFFFFF',
+        wall: '#0B3B5C',
+        path: '#F5FBFD',
+        finish: '#1A6B8A',
+        wallHighlight: 'rgba(255,255,255,0.08)',
+        gridLine: 'rgba(11,59,92,0.15)'
+    },
+    forest: {
+        bg: '#CAFCBA',
+        wall: '#124503',
+        path: '#CCE0D9',
+        finish: '#5F8C1C',
+        wallHighlight: 'rgba(255,255,255,0.1)',
+        gridLine: 'rgba(18,69,3,0.2)'
+    },
+   
+darkAcademia: {
+        bg: '#FFF8F0',
+        wall: '#3E2723',
+        path: '#F5F0E8',
+        finish: '#5D4037',
+        wallHighlight: 'rgba(255,248,240,0.06)',
+        gridLine: 'rgba(62,39,35,0.2)'
+    }
+
+};
+let currentStyle = 'sea';
+
+
+
+            // ============ СОСТОЯНИЕ ИГРЫ ============
+                        const state = {
+                maze: [],
+                rows: 0,
+                cols: 0,
+                playerPos: { row: 1, col: 1 },
+                animPlayerPos: { row: 1, col: 1 },
+                targetPlayerPos: { row: 1, col: 1 },
+                finishPos: { row: 0, col: 0 },
+                cellSize: 0,
+                canvasSize: 0,
+                gameActive: false,
+                dragging: false,
+                completed: false,
+                isAnimating: false
+            };
+
+            // ============ DOM ЭЛЕМЕНТЫ ============
+            const canvas = document.getElementById('mazeCanvas');
+            const ctx = canvas.getContext('2d');
+            const startScreen = document.getElementById('startScreen');
+            const loadingScreen = document.getElementById('loadingScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            const playBtn = document.getElementById('playBtn');
+            const completeBtn = document.getElementById('completeBtn');
+            const playAgainBtn = document.getElementById('playAgainBtn');
+
+            // ============ ГЕНЕРАЦИЯ ЛАБИРИНТА ============
+            function generateMaze(rows, cols) {
+                const maze = Array(rows).fill().map(() => Array(cols).fill(1));
+
+                const startRow = 1;
+                const startCol = 1;
+                maze[startRow][startCol] = 0;
+
+                const stack = [{ row: startRow, col: startCol }];
+                
+                const directions = [
+                    { dr: -2, dc: 0 },
+                    { dr: 2, dc: 0 },
+                    { dr: 0, dc: -2 },
+                    { dr: 0, dc: 2 }
+                ];
+
+                while (stack.length > 0) {
+                    const current = stack[stack.length - 1];
+                    const { row, col } = current;
+
+                    const shuffled = [...directions].sort(() => Math.random() - 0.5);
+                    let moved = false;
+
+                    for (const { dr, dc } of shuffled) {
+                        const newRow = row + dr;
+                        const newCol = col + dc;
+
+                        if (
+                            newRow > 0 && newRow < rows - 1 &&
+                            newCol > 0 && newCol < cols - 1 &&
+                            maze[newRow][newCol] === 1
+                        ) {
+                            maze[row + dr / 2][col + dc / 2] = 0;
+                            maze[newRow][newCol] = 0;
+                            stack.push({ row: newRow, col: newCol });
+                            moved = true;
+                            break;
+                        }
+                    }
+
+                    if (!moved) {
+                        stack.pop();
+                    }
+                }
+
+
+
+               
+// Финиш всегда в дальнем от старта углу
+const finishRow = rows - 2;
+const finishCol = cols - 2;
+
+// Гарантируем проход к финишу с нескольких сторон
+if (finishRow - 1 >= 0 && maze[finishRow - 1][finishCol] === 1) maze[finishRow - 1][finishCol] = 0;
+if (finishCol - 1 >= 0 && maze[finishRow][finishCol - 1] === 1) maze[finishRow][finishCol - 1] = 0;
+
+// Добавляем несколько случайных дополнительных проходов для сложности
+// (создаём петли, чтобы лабиринт не был идеальным деревом)
+const extraPaths = Math.floor(rows * cols * 0.08); // 3% дополнительных проходов
+for (let i = 0; i < extraPaths; i++) {
+    const r = Math.floor(Math.random() * (rows - 2)) + 1;
+    const c = Math.floor(Math.random() * (cols - 2)) + 1;
+    // Проверяем что это стена между двумя путями
+    if (maze[r][c] === 1) {
+        const openNeighbors = [];
+        if (r > 1 && maze[r - 1][c] === 0) openNeighbors.push({ r: r - 1, c });
+        if (r < rows - 2 && maze[r + 1][c] === 0) openNeighbors.push({ r: r + 1, c });
+        if (c > 1 && maze[r][c - 1] === 0) openNeighbors.push({ r, c: c - 1 });
+        if (c < cols - 2 && maze[r][c + 1] === 0) openNeighbors.push({ r, c: c + 1 });
+        if (openNeighbors.length >= 2) {
+            maze[r][c] = 0;
+        }
+    }
+}
+
+
+return { maze, finish: { row: finishRow, col: finishCol } };
+}
+
+            function randomMazeSize() {
+    const sizes = [15, 19, 21, 25, 29, 31, 35];
+    return sizes[Math.floor(Math.random() * sizes.length)];
+}
+
+            // ============ ОТРИСОВКА ============
+            function drawMaze() {
+                if (!state.gameActive || state.cellSize === 0) return;
+
+                const { maze, rows, cols, cellSize, playerPos, finishPos, canvasSize } = state;
+
+                ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+                // Фон
+                ctx.fillStyle = palettes[currentStyle].bg;
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                // Рисуем клетки
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = c * cellSize;
+                        const y = r * cellSize;
+
+                        if (maze[r][c] === 1) {
+                            ctx.fillStyle = palettes[currentStyle].wall;
+                            ctx.fillRect(x, y, cellSize, cellSize);
+                            ctx.fillStyle = palettes[currentStyle].wallHighlight;
+                            ctx.fillRect(x, y, cellSize, 2);
+                        } else {
+                            ctx.fillStyle = palettes[currentStyle].path;
+                            ctx.fillRect(x, y, cellSize, cellSize);
+                            ctx.strokeStyle = palettes[currentStyle].gridLine;
+                            ctx.lineWidth = 0.5;
+                            ctx.strokeRect(x, y, cellSize, cellSize);
+                        }
+                    }
+                }
+
+                // Финиш
+                const fx = finishPos.col * cellSize;
+                const fy = finishPos.row * cellSize;
+                ctx.fillStyle = palettes[currentStyle].finish;
+                ctx.fillRect(fx + 2, fy + 2, cellSize - 4, cellSize - 4);
+                ctx.fillStyle = '#FFFFFF';
+                const fontSize = Math.max(12, cellSize * 0.4);
+                ctx.font = `${fontSize}px "Noto Sans"`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🏠', fx + cellSize / 2, fy + cellSize / 2);
+
+                
+               // Игрок — рыба фугу
+// Игрок — эмодзи рыба фугу 🐡
+const px = state.animPlayerPos.col * cellSize;
+const py = state.animPlayerPos.row * cellSize;
+const emojiFontSize = cellSize * 1.0;
+ctx.font = `${emojiFontSize}px "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+const emoji = currentStyle === 'forest' ? '🌳' : 
+              currentStyle === 'darkAcademia' ? '📚' : '🐡';
+ctx.fillText(emoji, px + cellSize / 2, py + cellSize / 2);
+
+
+}
+
+
+            // ============ ОБРАБОТКА КООРДИНАТ ============
+            function getCanvasCoords(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = state.canvasSize / rect.width;
+                const scaleY = state.canvasSize / rect.height;
+                const canvasX = (clientX - rect.left) * scaleX;
+                const canvasY = (clientY - rect.top) * scaleY;
+                return {
+                    x: Math.max(0, Math.min(canvasX, state.canvasSize - 1)),
+                    y: Math.max(0, Math.min(canvasY, state.canvasSize - 1))
+                };
+            }
+
+            function getCellFromPoint(canvasX, canvasY) {
+                if (state.cellSize === 0) return null;
+                const col = Math.floor(canvasX / state.cellSize);
+                const row = Math.floor(canvasY / state.cellSize);
+                if (col >= 0 && col < state.cols && row >= 0 && row < state.rows) {
+                    return { row, col };
+                }
+                return null;
+            }
+
+            function isPassable(row, col) {
+                if (row < 0 || row >= state.rows || col < 0 || col >= state.cols) return false;
+                return state.maze[row][col] === 0;
+            }
+
+            // ============ ПЕРЕМЕЩЕНИЕ ИГРОКА ============
+                        function movePlayer(row, col) {
+                if (!state.gameActive || state.completed) return false;
+                if (!isPassable(row, col)) return false;
+
+                const dr = Math.abs(row - state.targetPlayerPos.row);
+                const dc = Math.abs(col - state.targetPlayerPos.col);
+                
+                if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1) || (dr === 0 && dc === 0)) {
+                    state.targetPlayerPos = { row, col };
+                    
+                    if (!state.isAnimating) {
+                        startAnimation();
+                    }
+                    
+                    if (row === state.finishPos.row && col === state.finishPos.col) {
+                        state.completed = true;
+                        completeBtn.disabled = false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+function startAnimation() {
+    if (state.isAnimating) return;
+    state.isAnimating = true;
+    animateStep();
+}
+
+function animateStep() {
+    const targetRow = state.targetPlayerPos.row;
+    const targetCol = state.targetPlayerPos.col;
+    const currentRow = state.animPlayerPos.row;
+    const currentCol = state.animPlayerPos.col;
+    
+    // Скорость анимации (меньше = плавнее, но медленнее)
+    const speed = 0.25;
+    
+    const newRow = currentRow + (targetRow - currentRow) * speed;
+    const newCol = currentCol + (targetCol - currentCol) * speed;
+    
+    state.animPlayerPos = { row: newRow, col: newCol };
+    state.playerPos = { 
+        row: Math.round(newRow), 
+        col: Math.round(newCol) 
+    };
+    
+    drawMaze();
+    
+    // Проверяем, достигли ли цели
+    const dist = Math.sqrt(
+        (targetRow - newRow) ** 2 + (targetCol - newCol) ** 2
+    );
+    
+    if (dist > 0.05) {
+        requestAnimationFrame(animateStep);
+    } else {
+        // Завершаем анимацию точно в цели
+        state.animPlayerPos = { row: targetRow, col: targetCol };
+        state.playerPos = { row: targetRow, col: targetCol };
+        state.isAnimating = false;
+        drawMaze();
+    }
+}
+
+
+
+            // ============ ОБРАБОТЧИКИ СОБЫТИЙ ============
+            function onPointerDown(e) {
+                if (!state.gameActive || state.completed) return;
+                e.preventDefault();
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const coords = getCanvasCoords(clientX, clientY);
+                const cell = getCellFromPoint(coords.x, coords.y);
+
+ const playerRow = Math.round(state.animPlayerPos.row);
+                const playerCol = Math.round(state.animPlayerPos.col);
+                if (cell && cell.row === playerRow && cell.col === playerCol) {
+                    state.dragging = true;
+                    canvas.style.cursor = 'grabbing';
+                }
+            }
+
+           function onPointerMove(e) {
+    if (!state.dragging || !state.gameActive || state.completed) return;
+    e.preventDefault();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const coords = getCanvasCoords(clientX, clientY);
+    const cell = getCellFromPoint(coords.x, coords.y);
+
+    if (!cell) return;
+
+    // Если попали прямо в соседнюю проходимую клетку — идём туда
+    if (isPassable(cell.row, cell.col)) {
+        movePlayer(cell.row, cell.col);
+        return;
+    }
+
+    // Если клетка непроходима (стена или далеко) — ищем ближайший проходимый коридор
+    const currentRow = state.playerPos.row;
+    const currentCol = state.playerPos.col;
+    
+    // Собираем всех проходимых соседей (включая текущую клетку)
+    const neighbors = [
+        { row: currentRow - 1, col: currentCol },
+        { row: currentRow + 1, col: currentCol },
+        { row: currentRow, col: currentCol - 1 },
+        { row: currentRow, col: currentCol + 1 },
+        { row: currentRow, col: currentCol } // текущая клетка — остаёмся на месте
+    ].filter(n => isPassable(n.row, n.col));
+    
+    if (neighbors.length === 0) return;
+    
+    // Находим ближайшего соседа к точке касания
+    let bestNeighbor = neighbors[0];
+    let bestDist = Infinity;
+    
+    const touchCenterX = cell.col * state.cellSize + state.cellSize / 2;
+    const touchCenterY = cell.row * state.cellSize + state.cellSize / 2;
+    
+    for (const n of neighbors) {
+        const nx = n.col * state.cellSize + state.cellSize / 2;
+        const ny = n.row * state.cellSize + state.cellSize / 2;
+        const dist = Math.sqrt((touchCenterX - nx) ** 2 + (touchCenterY - ny) ** 2);
+        
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestNeighbor = n;
+        }
+    }
+    
+    // Двигаем к ближайшему проходимому соседу
+    movePlayer(bestNeighbor.row, bestNeighbor.col);
+}
+
+            function onPointerUp(e) {
+                state.dragging = false;
+                canvas.style.cursor = 'default';
+            }
+
+            // ============ ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ ============
+            function bindEvents() {
+                canvas.addEventListener('mousedown', onPointerDown);
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('mouseup', onPointerUp);
+
+                canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+                canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+                canvas.addEventListener('touchend', onPointerUp);
+                canvas.addEventListener('touchcancel', onPointerUp);
+            }
+
+            // ============ ИЗМЕНЕНИЕ РАЗМЕРА ============
+            function resizeCanvas() {
+                // Используем ширину контейнера игры
+                const containerWidth = gameScreen.clientWidth;
+                const maxSize = Math.min(containerWidth - 40, 450);
+                
+                if (maxSize <= 0) {
+                    // Если экран не видим, пробуем позже
+                    setTimeout(resizeCanvas, 100);
+                    return;
+                }
+                
+                state.canvasSize = maxSize;
+                canvas.width = maxSize;
+                canvas.height = maxSize;
+                
+                 if (state.rows > 0) {
+                    state.cellSize = Math.floor(maxSize / state.rows);
+                }
+                
+                if (state.gameActive) {
+                    drawMaze();
+                }
+            }
+
+
+
+
+            // ============ ЗАПУСК ИГРЫ ============
+
+            function getMazeSizeForScreen() {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const minDimension = Math.min(screenWidth, screenHeight);
+    
+    if (minDimension < 400) return 11;   // маленький телефон
+    if (minDimension < 600) return 15;   // большой телефон
+    if (minDimension < 900) return 19;   // планшет
+    return 25;                            // десктоп
+}
+
+
+
+                        function startNewGame() {
+                const size = getMazeSizeForScreen();
+                state.rows = size;
+                state.cols = size;
+                state.completed = false;
+                state.dragging = false;
+                completeBtn.disabled = true;
+
+                const result = generateMaze(size, size);
+                state.maze = result.maze;
+                state.finishPos = result.finish;
+                state.playerPos = { row: 1, col: 1 };
+                state.animPlayerPos = { row: 1, col: 1 };
+                state.targetPlayerPos = { row: 1, col: 1 };
+                state.isAnimating = false;                
+                applyStyle();
+                state.gameActive = true;
+                canvas.style.cursor = 'default';
+            }
+
+
+function applyStyle() {
+    const root = document.documentElement;
+    if (currentStyle === 'forest') {
+        root.style.setProperty('--ocean-deep', '#124503');
+        root.style.setProperty('--ocean-mid', '#5F8C1C');
+        root.style.setProperty('--ocean-light', '#6E9C60');
+        root.style.setProperty('--mint-soft', '#CAFCBA');
+        root.style.setProperty('--white-cream', '#CCE0D9');
+        document.body.style.background = 'linear-gradient(145deg, #2A9C07 0%, #6E9C60 40%, #CAFCBA 100%)';
+        document.querySelector('.game-container').style.background = '#CCE0D9';
+    } else if (currentStyle === 'darkAcademia') {
+        root.style.setProperty('--ocean-deep', '#3E2723');
+        root.style.setProperty('--ocean-mid', '#5D4037');
+        root.style.setProperty('--ocean-light', '#8D6E63');
+        root.style.setProperty('--mint-soft', '#F5F0E8');
+        root.style.setProperty('--white-cream', '#FFF8F0');
+        document.body.style.background = 'linear-gradient(145deg, #3E2723 0%, #5D4037 40%, #8D6E63 100%)';
+        document.querySelector('.game-container').style.background = '#F5F0E8';
+    } else {
+        root.style.setProperty('--ocean-deep', '#0B3B5C');
+        root.style.setProperty('--ocean-mid', '#1A6B8A');
+        root.style.setProperty('--ocean-light', '#7EC8E0');
+        root.style.setProperty('--mint-soft', '#B8E4E0');
+        root.style.setProperty('--white-cream', '#F5FBFD');
+        document.body.style.background = 'linear-gradient(145deg, #D4F1F9 0%, #B0E0EC 40%, #89CFF0 100%)';
+        document.querySelector('.game-container').style.background = '#F5FBFD';
+    }
+}
+
+
+            function showScreen(screen) {
+                startScreen.classList.remove('active');
+                loadingScreen.classList.remove('active');
+                gameScreen.classList.remove('active');
+                screen.classList.add('active');
+            }
+
+            // ============ ЗАПУСК ============
+            function init() {
+
+document.querySelectorAll('.style-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        document.querySelectorAll('.style-option').forEach(el => el.classList.remove('selected'));
+                        this.classList.add('selected');
+                        currentStyle = this.dataset.style;
+                    });
+                });
+                bindEvents();
+
+                playBtn.addEventListener('click', () => {
+                    showScreen(loadingScreen);
+                    
+                    // Генерируем лабиринт
+                    startNewGame();
+                    
+                    // Ждем 1.5 секунды, потом показываем игру
+                    setTimeout(() => {
+                        showScreen(gameScreen);
+                        // Даем время на отрисовку, потом меняем размер
+                        requestAnimationFrame(() => {
+                            resizeCanvas();
+                        });
+                    }, 1500);
+                });
+
+                completeBtn.addEventListener('click', () => {
+                    if (state.completed) {
+                        alert('🎉 Поздравляем! Лабиринт пройден!');
+                    }
+                });
+
+                playAgainBtn.addEventListener('click', () => {
+                    state.gameActive = false;
+                    state.dragging = false;
+                    state.completed = false;
+                    showScreen(startScreen);
+                });
+
+                window.addEventListener('resize', () => {
+                    if (state.gameActive && gameScreen.classList.contains('active')) {
+                        resizeCanvas();
+                    }
+                });
+
+                showScreen(startScreen);
+            }
+
+            // Запуск
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>
